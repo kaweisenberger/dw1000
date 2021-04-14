@@ -42,6 +42,7 @@
 #define RANGE_FAILED 255
 #define BLINK 4
 #define RANGING_INIT 5
+#define MASTER_REPORT 6
 
 #define LEN_DATA 90
 
