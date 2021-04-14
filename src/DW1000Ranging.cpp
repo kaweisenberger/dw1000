@@ -915,6 +915,20 @@ void DW1000RangingClass::transmitRangeReport(DW1000Device* myDistantDevice) {
 	transmit(data, DW1000Time(_replyDelayTimeUS, DW1000Time::MICROSECONDS));
 }
 
+void DW1000RangingClass::transmitMasterReport(DW1000Device* myDistantDevice, float range1, float range2) {
+	transmitInit();
+	_globalMac.generateShortMACFrame(data, _currentShortAddress, myDistantDevice->getByteShortAddress());
+	data[SHORT_MAC_LEN] = RANGE_REPORT;
+	// write final ranging result
+	//float curRange   = myDistantDevice->getRange();
+	//float curRXPower = myDistantDevice->getRXPower();
+	//We add the Range and then the RXPower
+	memcpy(data+1+SHORT_MAC_LEN, &range1, 4);
+	memcpy(data+5+SHORT_MAC_LEN, &range2, 4);
+	copyShortAddress(_lastSentToShortAddress, myDistantDevice->getByteShortAddress());
+	transmit(data, DW1000Time(_replyDelayTimeUS, DW1000Time::MICROSECONDS));
+}
+
 void DW1000RangingClass::transmitRangeFailed(DW1000Device* myDistantDevice) {
 	transmitInit();
 	_globalMac.generateShortMACFrame(data, _currentShortAddress, myDistantDevice->getByteShortAddress());
