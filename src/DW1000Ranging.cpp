@@ -35,6 +35,8 @@ DW1000RangingClass DW1000Ranging;
 
 //other devices we are going to communicate with which are on our network:
 DW1000Device DW1000RangingClass::_networkDevices[MAX_DEVICES];
+DW1000Device DW1000RangingClass::_masterAnchor = nullptr;
+
 byte         DW1000RangingClass::_currentAddress[8];
 byte         DW1000RangingClass::_currentShortAddress[2];
 byte         DW1000RangingClass::_lastSentToShortAddress[2];
@@ -81,6 +83,7 @@ uint16_t  DW1000RangingClass::_successRangingCount = 0;
 uint32_t  DW1000RangingClass::_rangingCountPeriod  = 0;
 //Here our handlers
 void (* DW1000RangingClass::_handleNewRange)(void) = 0;
+void (* DW1000RangingClass::_handleMasterReport)(DW1000Device*, byte*, float, byte*, float) = 0;
 void (* DW1000RangingClass::_handleBlinkDevice)(DW1000Device*) = 0;
 void (* DW1000RangingClass::_handleNewDevice)(DW1000Device*) = 0;
 void (* DW1000RangingClass::_handleInactiveDevice)(DW1000Device*) = 0;
@@ -435,11 +438,9 @@ void DW1000RangingClass::loop() {
 					if (myDistantDevice) {
 						myDistantDevice->timeRangeSent = timeRangeSent;
 					}
-				}
-				
+				}		
 			}
 		}
-		
 	}
 	
 	//check for new received message
@@ -513,11 +514,30 @@ void DW1000RangingClass::loop() {
 			
 			//then we proceed to range protocole
 			if(_type == ANCHOR) {
-				if(messageType != _expectedMsgId) {
+				if(messageType != _expectedMsgId && messageType != MASTER_REPORT) {
 					// unexpected message, start over again (except if already POLL)
 					_protocolFailed = true;
 				}
-				if(messageType == POLL) {
+				if (messageType = MASTER_REPORT){
+					byte shortAddress1[2];
+					memcpy(shortAddress1, data+1+SHORT_MAC_LEN, 2);
+					float range1;
+					memcpy(&range1, data+3+SHORT_MAC_LEN, 4);
+					byte shortAddress2[2];
+					memcpy(shortAddress2, data+7+SHORT_MAC_LEN, 2);
+					float range2;
+					memcpy(&range2, data+9+SHORT_MAC_LEN, 4);
+										
+					//We can call our handler !
+					//we have finished our range computation. We send the corresponding handler
+					//_lastDistantDevice = myDistantDevice->getIndex();
+					
+					//Screw handling just serial print
+					if(_handleMasterReport != 0) {
+						(*_handleMasterReport)(&_masterAnchor, shortAddress1, range1, shortAddress2, range2);
+					}
+				}
+				else if(messageType == POLL) {
 					//we receive a POLL which is a broacast message
 					//we need to grab info about it
 					int16_t numberDevices = 0;
