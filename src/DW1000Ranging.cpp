@@ -35,7 +35,10 @@ DW1000RangingClass DW1000Ranging;
 
 //other devices we are going to communicate with which are on our network:
 DW1000Device DW1000RangingClass::_networkDevices[MAX_DEVICES];
+
 DW1000Device DW1000RangingClass::_masterAnchor = nullptr;
+float 		tagDistance = 0;
+byte		DW1000RangingClass::_tagDistanceAddress[2];
 
 byte         DW1000RangingClass::_currentAddress[8];
 byte         DW1000RangingClass::_currentShortAddress[2];
@@ -161,7 +164,6 @@ void DW1000RangingClass::generalStart() {
 	_rangingCountPeriod = millis();
 }
 
-
 void DW1000RangingClass::startAsAnchor(char address[], const byte mode[], const bool randomShortAddress) {
 	//save the address
 	DW1000.convertToByte(address, _currentAddress);
@@ -223,6 +225,11 @@ void DW1000RangingClass::startAsTag(char address[], const byte mode[], const boo
 	_type = TAG;
 	
 	Serial.println("### TAG ###");
+
+	//csb59
+	tagDistance1 = 0;
+	tagDistance2 = 0;
+	tagDistance1
 }
 
 boolean DW1000RangingClass::addNetworkDevices(DW1000Device* device, boolean shortAddress) {
@@ -682,7 +689,19 @@ void DW1000RangingClass::loop() {
 					myDistantDevice->setRange(curRange);
 					myDistantDevice->setRXPower(curRXPower);
 					
-					
+					if (tagDistance == 0){
+						tagDistance = curRange;
+						tagDistanceAddress = myDistantDevice->getByteShortAddress();
+					}
+					else if (tagDistanceAddress[0] == myDistantDevice->getByteShortAddress()[0] && 
+							 tagDistanceAddress[1] == myDistantDevice->getByteShortAddress()[1]) {
+						tagDistance = curRange;
+					}
+					else{
+						transmitMasterReport(&_masterAnchor, tagDistanceAddress, tagDistance, myDistantDevice->getByteShortAddress(), curRange);
+						tagDistance = 0;
+					}
+
 					//We can call our handler !
 					//we have finished our range computation. We send the corresponding handler
 					_lastDistantDevice = myDistantDevice->getIndex();
@@ -935,7 +954,7 @@ void DW1000RangingClass::transmitRangeReport(DW1000Device* myDistantDevice) {
 	transmit(data, DW1000Time(_replyDelayTimeUS, DW1000Time::MICROSECONDS));
 }
 
-void DW1000RangingClass::transmitMasterReport(DW1000Device* myDistantDevice, float range1, float range2) {
+void DW1000RangingClass::transmitMasterReport(DW1000Device* myDistantDevice, byte* addr1, float range1, byte* addr2, float range2) {
 	transmitInit();
 	_globalMac.generateShortMACFrame(data, _currentShortAddress, myDistantDevice->getByteShortAddress());
 	data[SHORT_MAC_LEN] = MASTER_REPORT;
@@ -943,8 +962,10 @@ void DW1000RangingClass::transmitMasterReport(DW1000Device* myDistantDevice, flo
 	//float curRange   = myDistantDevice->getRange();
 	//float curRXPower = myDistantDevice->getRXPower();
 	//We add the Range and then the RXPower
-	memcpy(data+1+SHORT_MAC_LEN, &range1, 4);
-	memcpy(data+5+SHORT_MAC_LEN, &range2, 4);
+	memcpy(data+1+SHORT_MAC_LEN, &addr1, 2);
+	memcpy(data+3+SHORT_MAC_LEN, &range1, 4);
+	memcpy(data+7+SHORT_MAC_LEN, &addr2, 2);
+	memcpy(data+9+SHORT_MAC_LEN, &range2, 4);
 	copyShortAddress(_lastSentToShortAddress, myDistantDevice->getByteShortAddress());
 	transmit(data, DW1000Time(_replyDelayTimeUS, DW1000Time::MICROSECONDS));
 }
