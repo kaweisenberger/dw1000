@@ -86,7 +86,6 @@ uint16_t  DW1000RangingClass::_successRangingCount = 0;
 uint32_t  DW1000RangingClass::_rangingCountPeriod  = 0;
 //Here our handlers
 void (* DW1000RangingClass::_handleNewRange)(void) = 0;
-void (* DW1000RangingClass::_handleMasterReport)(DW1000Device*, byte*, float, byte*, float) = 0;
 void (* DW1000RangingClass::_handleBlinkDevice)(DW1000Device*) = 0;
 void (* DW1000RangingClass::_handleNewDevice)(DW1000Device*) = 0;
 void (* DW1000RangingClass::_handleInactiveDevice)(DW1000Device*) = 0;
@@ -540,9 +539,16 @@ void DW1000RangingClass::loop() {
 					//_lastDistantDevice = myDistantDevice->getIndex();
 					
 					//Screw handling just serial print
-					if(_handleMasterReport != 0) {
-						(*_handleMasterReport)(&_masterAnchor, shortAddress1, range1, shortAddress2, range2);
-					}
+					Serial.print(shortAddress1, HEX);
+					Serial.print("\t"); 
+					Serial.print(range1);
+					Serial.print("\t");
+					Serial.print(shortAddress2, HEX);
+					Serial.print("\t");
+					Serial.println(range2);
+					//if(_handleMasterReport != 0) {
+					//	(*_handleMasterReport)(&_masterAnchor, shortAddress1, range1, shortAddress2, range2);
+					//}
 				}
 				else if(messageType == POLL) {
 					//we receive a POLL which is a broacast message

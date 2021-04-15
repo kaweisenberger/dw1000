@@ -107,7 +107,6 @@ public:
 	static void setRangeFilterValue(uint16_t newValue);
 	
 	//Handlers:
-	static void attachMasterReport(void (* handleMasterReport)(DW1000Device*, byte*, float, byte* float)) { _handleMasterReport = handleMasterReport; };
 
 	static void attachNewRange(void (* handleNewRange)(void)) { _handleNewRange = handleNewRange; };
 	
@@ -139,7 +138,6 @@ private:
 	static int16_t      counterForBlink;
 	
 	//Handlers:
-	static void (* _handleMasterReport)(DW1000Device*, byte*, float, byte*, float);
 	static void (* _handleNewRange)(void);
 	static void (* _handleBlinkDevice)(DW1000Device*);
 	static void (* _handleNewDevice)(DW1000Device*);
