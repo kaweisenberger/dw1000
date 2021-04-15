@@ -38,7 +38,7 @@ DW1000Device DW1000RangingClass::_networkDevices[MAX_DEVICES];
 
 DW1000Device DW1000RangingClass::_masterAnchor = nullptr;
 float 		tagDistance = 0;
-byte		DW1000RangingClass::_tagDistanceAddress[2];
+byte		*DW1000RangingClass::_tagDistanceAddress;
 
 byte         DW1000RangingClass::_currentAddress[8];
 byte         DW1000RangingClass::_currentShortAddress[2];
@@ -226,9 +226,7 @@ void DW1000RangingClass::startAsTag(char address[], const byte mode[], const boo
 	Serial.println("### TAG ###");
 
 	//csb59
-	tagDistance1 = 0;
-	tagDistance2 = 0;
-	tagDistance1
+	tagDistance = 0;
 }
 
 boolean DW1000RangingClass::addNetworkDevices(DW1000Device* device, boolean shortAddress) {
@@ -539,11 +537,13 @@ void DW1000RangingClass::loop() {
 					//_lastDistantDevice = myDistantDevice->getIndex();
 					
 					//Screw handling just serial print
-					Serial.print(shortAddress1, HEX);
-					Serial.print("\t"); 
+					Serial.print(shortAddress1[0]);
+					Serial.print(shortAddress1[1]);
+					Serial.print("\t");
 					Serial.print(range1);
 					Serial.print("\t");
-					Serial.print(shortAddress2, HEX);
+					Serial.print(shortAddress2[0]);
+					Serial.print(shortAddress2[1]);
 					Serial.print("\t");
 					Serial.println(range2);
 					//if(_handleMasterReport != 0) {
@@ -697,14 +697,14 @@ void DW1000RangingClass::loop() {
 					
 					if (tagDistance == 0){
 						tagDistance = curRange;
-						tagDistanceAddress = myDistantDevice->getByteShortAddress();
+						_tagDistanceAddress = myDistantDevice->getByteShortAddress();
 					}
-					else if (tagDistanceAddress[0] == myDistantDevice->getByteShortAddress()[0] && 
-							 tagDistanceAddress[1] == myDistantDevice->getByteShortAddress()[1]) {
+					else if (_tagDistanceAddress[0] == myDistantDevice->getByteShortAddress()[0] && 
+							 _tagDistanceAddress[1] == myDistantDevice->getByteShortAddress()[1]) {
 						tagDistance = curRange;
 					}
 					else{
-						transmitMasterReport(&_masterAnchor, tagDistanceAddress, tagDistance, myDistantDevice->getByteShortAddress(), curRange);
+						transmitMasterReport(&_masterAnchor, _tagDistanceAddress, tagDistance, myDistantDevice->getByteShortAddress(), curRange);
 						tagDistance = 0;
 					}
 

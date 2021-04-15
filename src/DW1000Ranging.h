@@ -128,6 +128,10 @@ public:
 private:
 	//other devices in the network
 	static DW1000Device _networkDevices[MAX_DEVICES];
+
+	static DW1000Device _masterAnchor;
+	static byte* _tagDistanceAddress;
+
 	static volatile uint8_t _networkDevicesNumber;
 	static int16_t      _lastDistantDevice;
 	static byte         _currentAddress[8];
@@ -195,6 +199,7 @@ private:
 	static void transmitBlink();
 	static void transmitRangingInit(DW1000Device* myDistantDevice);
 	static void transmitPollAck(DW1000Device* myDistantDevice);
+	static void transmitMasterReport(DW1000Device* myDistantDevice, byte* addr1, float range1, byte* addr2, float range2);
 	static void transmitRangeReport(DW1000Device* myDistantDevice);
 	static void transmitRangeFailed(DW1000Device* myDistantDevice);
 	static void receiver();
