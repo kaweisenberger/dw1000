@@ -129,8 +129,9 @@ private:
 	//other devices in the network
 	static DW1000Device _networkDevices[MAX_DEVICES];
 
-	static DW1000Device _masterAnchor;
+	static DW1000Device* _masterAnchor;
 	static byte* _tagDistanceAddress;
+	static byte _masterAnchorAddress[8];
 
 	static volatile uint8_t _networkDevicesNumber;
 	static int16_t      _lastDistantDevice;

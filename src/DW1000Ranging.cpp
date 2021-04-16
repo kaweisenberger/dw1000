@@ -36,7 +36,9 @@ DW1000RangingClass DW1000Ranging;
 //other devices we are going to communicate with which are on our network:
 DW1000Device DW1000RangingClass::_networkDevices[MAX_DEVICES];
 
-DW1000Device DW1000RangingClass::_masterAnchor = nullptr;
+DW1000Device *DW1000RangingClass::_masterAnchor = nullptr;
+
+byte DW1000RangingClass::_masterAnchorAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 float 		tagDistance = 0;
 byte		*DW1000RangingClass::_tagDistanceAddress;
 
@@ -252,6 +254,11 @@ boolean DW1000RangingClass::addNetworkDevices(DW1000Device* device, boolean shor
 		memcpy(&_networkDevices[_networkDevicesNumber], device, sizeof(DW1000Device));
 		_networkDevices[_networkDevicesNumber].setIndex(_networkDevicesNumber);
 		_networkDevicesNumber++;
+
+		if (!memcmp(device->getByteAddress(),_masterAnchorAddress,8)){
+			//this address is the master anchor
+			_masterAnchor = device;
+		}
 		return true;
 	}
 	
@@ -586,7 +593,6 @@ void DW1000RangingClass::loop() {
 						
 					}
 					
-					
 				}
 				else if(messageType == RANGE) {
 					//we receive a RANGE which is a broacast message
@@ -704,7 +710,7 @@ void DW1000RangingClass::loop() {
 						tagDistance = curRange;
 					}
 					else{
-						transmitMasterReport(&_masterAnchor, _tagDistanceAddress, tagDistance, myDistantDevice->getByteShortAddress(), curRange);
+						transmitMasterReport(_masterAnchor, _tagDistanceAddress, tagDistance, myDistantDevice->getByteShortAddress(), curRange);
 						tagDistance = 0;
 					}
 
