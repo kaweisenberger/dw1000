@@ -32,6 +32,11 @@
 
 DW1000RangingClass DW1000Ranging;
 
+//csb59
+byte _masterAnchorAddress[] = {0x1a, 0x1a};
+uint16_t newAddr = 0;
+bool newAddrFound = false;
+float newAddrRange = 0;
 
 //other devices we are going to communicate with which are on our network:
 DW1000Device DW1000RangingClass::_networkDevices[MAX_DEVICES];
@@ -372,6 +377,11 @@ int16_t DW1000RangingClass::detectMessageType(byte datas[]) {
 
 void DW1000RangingClass::loop() {
 	//we check if needed to reset !
+
+	//csb59
+	
+
+
 	checkForReset();
 	uint32_t time = millis(); // TODO other name - too close to "timer"
 	if(time-timer > _timerDelay) {
@@ -384,6 +394,11 @@ void DW1000RangingClass::loop() {
 		
 		// TODO cc
 		int messageType = detectMessageType(data);
+		//Serial.print("Sent Message type: ");
+		//Serial.println(messageType);
+
+		
+
 		
 		if(messageType != POLL_ACK && messageType != POLL && messageType != RANGE)
 			return;
@@ -451,6 +466,8 @@ void DW1000RangingClass::loop() {
 		DW1000.getData(data, LEN_DATA);
 		
 		int messageType = detectMessageType(data);
+		//Serial.print("Received Message type: ");
+		//Serial.println(messageType);
 		
 		//we have just received a BLINK message from tag
 		if(messageType == BLINK && _type == ANCHOR) {
@@ -513,11 +530,34 @@ void DW1000RangingClass::loop() {
 			
 			//then we proceed to range protocole
 			if(_type == ANCHOR) {
-				if(messageType != _expectedMsgId) {
+				if(messageType != _expectedMsgId && messageType != MASTER_REPORT) {
 					// unexpected message, start over again (except if already POLL)
 					_protocolFailed = true;
 				}
-				if(messageType == POLL) {
+
+				if (messageType == MASTER_REPORT){
+					//byte address[2];
+					//_globalMac.decodeShortMACFrame(data, address);
+
+					uint16_t shortAddr1;
+					uint16_t shortAddr2;
+					float range1;
+					float range2;
+					memcpy(&shortAddr1, data+1+SHORT_MAC_LEN, 2);
+					memcpy(&range1, data+3+SHORT_MAC_LEN, 4);
+					memcpy(&shortAddr2, data+7+SHORT_MAC_LEN, 2);
+					memcpy(&range2, data+9+SHORT_MAC_LEN, 4);
+
+					Serial.print(shortAddr1);
+					Serial.print("\t");
+					Serial.print(range1);
+					Serial.print("\t");
+					Serial.print(shortAddr2);
+					Serial.print("\t");
+					Serial.println(range2);
+					return;
+				}
+				else if(messageType == POLL) {
 					//we receive a POLL which is a broacast message
 					//we need to grab info about it
 					int16_t numberDevices = 0;
@@ -661,6 +701,45 @@ void DW1000RangingClass::loop() {
 					//we have a new range to save !
 					myDistantDevice->setRange(curRange);
 					myDistantDevice->setRXPower(curRXPower);
+
+					if (!newAddrFound){
+						newAddr = myDistantDevice->getShortAddress();
+						newAddrFound = true;
+						newAddrRange = curRange;
+						Serial.println("new addr found");
+					}
+					else if (myDistantDevice->getShortAddress() == newAddr){
+						newAddrRange = curRange;
+						Serial.println("new addr updated");
+					}
+					else{
+						Serial.println("two addrs found, sending to master");
+						Serial.print(newAddr);
+						Serial.print("\t");
+						Serial.print(newAddrRange);
+						Serial.print("\t");
+						Serial.print(myDistantDevice->getShortAddress());
+						Serial.print("\t");
+						Serial.println(curRange);
+						newAddrFound = false;
+						//Send this data to master anchor
+
+						transmitInit();
+						_globalMac.generateShortMACFrame(data, _currentShortAddress, _masterAnchorAddress);
+						data[SHORT_MAC_LEN] = MASTER_REPORT;
+						// write final ranging result
+						//We add the Range and then the RXPower
+						uint16_t tempAddr = myDistantDevice->getShortAddress();
+						memcpy(data+1+SHORT_MAC_LEN, &newAddr, 2);
+						memcpy(data+3+SHORT_MAC_LEN, &newAddrRange, 4);
+						memcpy(data+7+SHORT_MAC_LEN, &tempAddr, 2);
+						memcpy(data+9+SHORT_MAC_LEN, &curRange, 4);
+
+						//comment out this line below or not?
+						//copyShortAddress(_lastSentToShortAddress, _masterAnchorAddress);
+						
+						transmit(data, DW1000Time(_replyDelayTimeUS, DW1000Time::MICROSECONDS));
+					}
 					
 					
 					//We can call our handler !
@@ -669,6 +748,8 @@ void DW1000RangingClass::loop() {
 					if(_handleNewRange != 0) {
 						(*_handleNewRange)();
 					}
+
+
 				}
 				else if(messageType == RANGE_FAILED) {
 					//not needed as we have a timer;
